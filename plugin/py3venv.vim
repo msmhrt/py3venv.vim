@@ -19,16 +19,21 @@ let s:save_cpo = &cpo
 set cpo&vim
 
 python3 << PYTHONEOF
-import os
-import sys
-import vim
+try:
+    class DummyClassForLocalScope():
+        import os
+        import sys
+        import vim
 
-sys.path.insert(0,
-		os.path.join(vim.eval('expand("<sfile>:p:h:h")'),
-		'plugin'))
-import py3venv
-py3venv.set_syspath()
+        sys.path.insert(0,
+                        os.path.join(vim.eval('expand("<sfile>:p:h:h")'),
+                        'plugin'))
+        import py3venv
+        py3venv.set_syspath()
 
+        raise RuntimeError
+except RuntimeError:
+    pass
 PYTHONEOF
 
 let &cpo = s:save_cpo
