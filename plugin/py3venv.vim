@@ -1,7 +1,7 @@
 " py3venv.vim - Vim global plugin to support Python 3 venv
 
-" Version:      0.1
-" Last Change:  13 Apr 2013
+" Version:      0.2
+" Last Change:  3 Dec 2013
 " Maintainer:   Masami HIRATA <msmhrt@gmail.com>
 " License:      BSD 2-Clause License
 
@@ -25,11 +25,13 @@ try:
         import sys
         import vim
 
-        sys.path.insert(0,
-                        os.path.join(vim.eval('expand("<sfile>:p:h:h")'),
-                        'plugin'))
+        py3venv_path = os.path.join(vim.eval('expand("<sfile>:p:h:h")'),
+                                    'plugin')
+        sys.path.insert(0, py3venv_path)
         import py3venv
-        py3venv.set_syspath()
+        status = py3venv.set_syspath()
+        if status is not None and py3venv_path in sys.path:
+            sys.path.remove(py3venv_path)
 
         raise RuntimeError
 except RuntimeError:
