@@ -33,7 +33,7 @@ try:
             is_py3venv_path_added = True
 
         import py3venv
-        py3venv.set_syspath()
+        py3venv.activate()
 
         if is_py3venv_path_added and py3venv_path in sys.path:
             sys.path.remove(py3venv_path)

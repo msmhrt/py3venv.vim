@@ -250,7 +250,7 @@ def activate_virtualenv(venv_path=None, force=False):
             return venv_path
 
 
-def set_syspath(venv_path=None):
+def activate(venv_path=None):
     if venv_path is None:
         venv_path = get_venv_path()
         if venv_path is None:
