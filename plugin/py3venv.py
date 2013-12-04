@@ -161,6 +161,20 @@ def reset_syspath():
     sys.path = saved_syspath
 
 
+def get_vim_special_path():
+    vim_special_path = None
+    try:
+        import vim
+
+        if (vim.path_hook in sys.path_hooks and
+                vim.VIM_SPECIAL_PATH in sys.path):
+            vim_special_path = vim.VIM_SPECIAL_PATH
+    except (AttributeError, ImportError):
+        pass
+
+    return vim_special_path
+
+
 def activate_venv(venv_path=None, force=False):
     if venv_path is None:
         venv_path = get_venv_path()
@@ -177,9 +191,12 @@ def activate_venv(venv_path=None, force=False):
 
     saved_sys_executable = sys.executable
     sys.executable = venv_executable
+    vim_special_path = get_vim_special_path()
     try:
         reset_syspath()
         site.main()
+        if vim_special_path is not None:
+            sys.path.append(vim_special_path)
     except (ImportError, AttributeError, OSError):
         sys.executable = saved_sys_executable
         return None
