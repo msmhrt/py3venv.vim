@@ -29,6 +29,20 @@ def get_venv_path():
     return os.environ.get("VIRTUAL_ENV")
 
 
+def is_venv_enabled():
+    # Because deactivate.bat in venv module of Python 3.3 doesn't unset
+    # %VIRTUAL_ENV%, we check %_OLD_VIRTUAL_PATH%.
+    venv_enabled = False
+    if sys.platform == "win32":
+        if os.environ.get("_OLD_VIRTUAL_PATH") is not None:
+            venv_enabled = True
+    else:
+        if get_venv_path() is not None:
+            venv_enabled = True
+
+    return venv_enabled
+
+
 def get_pyvenv_cfg_path(venv_path=None):
     if venv_path is None:
         venv_path = get_venv_path()
@@ -189,7 +203,8 @@ def activate_venv(venv_path=None, force=False):
             return None
 
     venv_version = get_venv_version(venv_path)
-    if not force and not is_valid_version(venv_version):
+    if not (force or (is_valid_version(venv_version) and
+                      is_venv_enabled())):
         return None
 
     venv_executable = get_venv_executable(venv_path)
