@@ -115,6 +115,20 @@ def is_valid_version(version):
     return False
 
 
+def is_valid_lib_path(venv_path=None):
+    if venv_path is None:
+        venv_path = get_venv_path()
+        if venv_path is None:
+            return False
+
+    try:
+        lib_path = os.path.join(venv_path, LIB_PATH)
+    except TypeError:
+        return False
+
+    return os.path.exists(lib_path)
+
+
 def get_venv_executable(venv_path=None):
     if venv_path is None:
         venv_path = get_venv_path()
@@ -255,6 +269,9 @@ def activate(venv_path=None):
         venv_path = get_venv_path()
         if venv_path is None:
             return None
+
+    if not is_valid_lib_path(venv_path):
+        return None
 
     status = activate_venv(venv_path)
     if status is not None:
