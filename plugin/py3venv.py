@@ -147,18 +147,25 @@ def get_venv_executable(venv_path=None):
 
 
 def reset_syspath():
-    from ctypes import pythonapi
-
     # remove sys.__egginsert for easy-install.pth
     if hasattr(sys, "__egginsert"):
         delattr(sys, "__egginsert")
 
     # id(sys.path) must not be changed.
     saved_syspath = sys.path
-    delattr(sys, "path")
-    pythonapi.PySys_SetPath(pythonapi.Py_GetPath())
-    saved_syspath[:] = sys.path
-    sys.path = saved_syspath
+    try:
+        from ctypes import pythonapi
+
+        delattr(sys, "path")
+        pythonapi.PySys_SetPath(pythonapi.Py_GetPath())
+        saved_syspath[:] = sys.path
+        error = None
+    except (ImportError, AttributeError, OSError) as exception:
+        error = exception
+    finally:
+        sys.path = saved_syspath
+
+    return error
 
 
 def get_vim_special_path():
@@ -192,14 +199,14 @@ def activate_venv(venv_path=None, force=False):
     saved_sys_executable = sys.executable
     sys.executable = venv_executable
     vim_special_path = get_vim_special_path()
-    try:
-        reset_syspath()
-        site.main()
-        if vim_special_path is not None:
-            sys.path.append(vim_special_path)
-    except (ImportError, AttributeError, OSError):
+
+    error = reset_syspath()
+    if error is not None:
         sys.executable = saved_sys_executable
         return None
+    site.main()
+    if vim_special_path is not None and vim_special_path not in sys.path:
+        sys.path.append(vim_special_path)
 
     return venv_path
 
