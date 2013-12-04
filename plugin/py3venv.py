@@ -124,9 +124,9 @@ def get_venv_version(venv_path=None):
 
 def is_valid_version(version):
     current_version = distutils.__version__
-    if version == current_version:
-        return True
-    return False
+    if version != current_version:
+        return False
+    return True
 
 
 def is_valid_lib_path(venv_path=None):
@@ -293,14 +293,18 @@ def activate_virtualenv(venv_path=None, force=False):
         return None
 
     activate_this_path = get_virtualenv_activate_this_path(venv_path)
-    if activate_this_path is not None:
-        try:
-            activate_source = open(activate_this_path).read()
-            exec(activate_source, dict(__file__=activate_this_path))
-        except OSError:
-            pass
-        else:
-            return venv_path
+    if activate_this_path is None:
+        return None
+
+    new_venv_path = None
+    try:
+        activate_source = open(activate_this_path).read()
+        exec(activate_source, dict(__file__=activate_this_path))
+        new_venv_path = venv_path
+    except OSError:
+        pass
+
+    return new_venv_path
 
 
 def activate(venv_path=None):
@@ -312,12 +316,8 @@ def activate(venv_path=None):
     if not is_valid_lib_path(venv_path):
         return None
 
-    status = activate_venv(venv_path)
-    if status is not None:
-        return status
+    new_venv_path = activate_venv(venv_path)
+    if new_venv_path is None:
+        new_venv_path = activate_virtualenv(venv_path)
 
-    status = activate_virtualenv(venv_path)
-    if status is not None:
-        return status
-
-    return None
+    return new_venv_path
