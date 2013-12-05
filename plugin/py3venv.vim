@@ -25,18 +25,15 @@ try:
         import sys
         import vim
 
-        py3venv_path = os.path.join(vim.eval('expand("<sfile>:p:h:h")'),
-                                    'plugin')
-        is_py3venv_path_added = False
-        if py3venv_path not in sys.path:
-            sys.path.insert(0, py3venv_path)
-            is_py3venv_path_added = True
-
+        plugin_path = vim.eval('expand("<sfile>:p:h")')
+        sys.path.insert(0, plugin_path)
         import py3venv
-        py3venv.activate()
 
-        if is_py3venv_path_added and py3venv_path in sys.path:
-            sys.path.remove(py3venv_path)
+        # remove plugin_path from sys.path before py3env.activate()
+        if plugin_path in sys.path:
+            sys.path.remove(plugin_path)
+
+        py3venv.activate()
 
         raise RuntimeError
 except RuntimeError:
