@@ -75,7 +75,7 @@ def get_venv_original_prefix(venv_prefix=None):
                 if match is not None:
                     original_prefix = match.groupdict().get("home")
                     break
-    except OSError:
+    except EnvironmentError:
         pass
 
     if original_prefix is not None and sys.platform != "win32":
@@ -112,7 +112,7 @@ def get_python_version(prefix):
                 match = RE_PYTHON_VERSION.match(line)
                 if match is not None:
                     python_version = match.groupdict().get("version")
-    except OSError:
+    except EnvironmentError:
         pass
 
     return python_version
@@ -178,7 +178,7 @@ def reset_syspath():
         pythonapi.PySys_SetPath(pythonapi.Py_GetPath())
         saved_syspath[:] = sys.path
         error = None
-    except (ImportError, AttributeError, OSError) as exception:
+    except (ImportError, AttributeError, EnvironmentError) as exception:
         error = exception
     finally:
         sys.path = saved_syspath
@@ -257,7 +257,7 @@ def get_virtualenv_original_prefix(venv_prefix=None):
         with open(orig_prefix_txt_path,
                   encoding='utf-8') as orig_prefix_txt_file:
             original_prefix = orig_prefix_txt_file.readline()
-    except OSError:
+    except EnvironmentError:
         pass
 
     return original_prefix
@@ -307,7 +307,7 @@ def activate_virtualenv(venv_prefix=None, force=False):
             activate_source = activate_file.read()
         exec(activate_source, dict(__file__=activate_this_path))
         new_venv_prefix = venv_prefix
-    except OSError:
+    except EnvironmentError:
         pass
 
     return new_venv_prefix
