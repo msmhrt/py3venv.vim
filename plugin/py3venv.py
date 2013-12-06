@@ -25,40 +25,40 @@ RE_PYTHON_VERSION = re.compile(r"""(?xa)
     \A\s*__version__\s*=\s*\"(?P<version>[^"]+)\"""")
 
 
-def get_venv_path():
+def get_venv_prefix():
     return os.environ.get("VIRTUAL_ENV")
 
 
-def is_venv_enabled():
+def is_venv_activated():
     # Because deactivate.bat in venv module of Python 3.3 doesn't unset
     # %VIRTUAL_ENV%, we check %_OLD_VIRTUAL_PATH%.
-    venv_enabled = False
+    activated = False
     if sys.platform == "win32":
         if os.environ.get("_OLD_VIRTUAL_PATH") is not None:
-            venv_enabled = True
+            activated = True
     else:
-        if get_venv_path() is not None:
-            venv_enabled = True
+        if get_venv_prefix() is not None:
+            activated = True
 
-    return venv_enabled
+    return activated
 
 
-def get_pyvenv_cfg_path(venv_path=None):
-    if venv_path is None:
-        venv_path = get_venv_path()
-        if venv_path is None:
+def make_pyvenv_cfg_path(venv_prefix=None):
+    if venv_prefix is None:
+        venv_prefix = get_venv_prefix()
+        if venv_prefix is None:
             return None
 
     try:
-        pyvenv_cfg_path = os.path.join(venv_path, "pyvenv.cfg")
+        pyvenv_cfg_path = os.path.join(venv_prefix, "pyvenv.cfg")
     except TypeError:
         pyvenv_cfg_path = None
 
     return pyvenv_cfg_path
 
 
-def get_venv_original_prefix(venv_path=None):
-    pyvenv_cfg_path = get_pyvenv_cfg_path(venv_path)
+def get_venv_original_prefix(venv_prefix=None):
+    pyvenv_cfg_path = make_pyvenv_cfg_path(venv_prefix)
     if pyvenv_cfg_path is None:
         return None
 
@@ -80,7 +80,7 @@ def get_venv_original_prefix(venv_path=None):
     return original_prefix
 
 
-def get_distutils_path(prefix):
+def make_distutils_path(prefix):
     if prefix is None:
         return None
 
@@ -96,7 +96,7 @@ def get_distutils_path(prefix):
 
 
 def get_python_version(prefix):
-    distutils_path = get_distutils_path(prefix)
+    distutils_path = make_distutils_path(prefix)
     if distutils_path is None:
         return None
 
@@ -114,8 +114,8 @@ def get_python_version(prefix):
     return python_version
 
 
-def get_venv_version(venv_path=None):
-    original_prefix = get_venv_original_prefix(venv_path)
+def get_venv_version(venv_prefix=None):
+    original_prefix = get_venv_original_prefix(venv_prefix)
     if original_prefix is None:
         return None
 
@@ -129,35 +129,35 @@ def is_valid_version(version):
     return True
 
 
-def is_valid_lib_path(venv_path=None):
-    if venv_path is None:
-        venv_path = get_venv_path()
-        if venv_path is None:
+def is_valid_lib_path(venv_prefix=None):
+    if venv_prefix is None:
+        venv_prefix = get_venv_prefix()
+        if venv_prefix is None:
             return False
 
     try:
-        lib_path = os.path.join(venv_path, LIB_PATH)
+        lib_path = os.path.join(venv_prefix, LIB_PATH)
     except TypeError:
         return False
 
     return os.path.exists(lib_path)
 
 
-def get_venv_executable(venv_path=None):
-    if venv_path is None:
-        venv_path = get_venv_path()
-        if venv_path is None:
+def make_venv_executable_path(venv_prefix=None):
+    if venv_prefix is None:
+        venv_prefix = get_venv_prefix()
+        if venv_prefix is None:
             return None
 
-    venv_executable = None
+    venv_executable_path = None
     try:
-        venv_executable = os.path.abspath(os.path.join(venv_path,
-                                                       BIN_PATH,
-                                                       EXECFILE))
+        venv_executable_path = os.path.abspath(os.path.join(venv_prefix,
+                                                            BIN_PATH,
+                                                            EXECFILE))
     except TypeError:
         pass
 
-    return venv_executable
+    return venv_executable_path
 
 
 def reset_syspath():
@@ -196,23 +196,23 @@ def get_vim_special_path():
     return vim_special_path
 
 
-def activate_venv(venv_path=None, force=False):
-    if venv_path is None:
-        venv_path = get_venv_path()
-        if venv_path is None:
+def activate_venv(venv_prefix=None, force=False):
+    if venv_prefix is None:
+        venv_prefix = get_venv_prefix()
+        if venv_prefix is None:
             return None
 
-    venv_version = get_venv_version(venv_path)
+    venv_version = get_venv_version(venv_prefix)
     if not (force or (is_valid_version(venv_version) and
-                      is_venv_enabled())):
+                      is_venv_activated())):
         return None
 
-    venv_executable = get_venv_executable(venv_path)
-    if venv_executable is None:
+    venv_executable_path = make_venv_executable_path(venv_prefix)
+    if venv_executable_path is None:
         return None
 
     saved_sys_executable = sys.executable
-    sys.executable = venv_executable
+    sys.executable = venv_executable_path
     vim_special_path = get_vim_special_path()
 
     error = reset_syspath()
@@ -223,17 +223,17 @@ def activate_venv(venv_path=None, force=False):
     if vim_special_path is not None and vim_special_path not in sys.path:
         sys.path.append(vim_special_path)
 
-    return venv_path
+    return venv_prefix
 
 
-def get_orig_prefix_txt_path(venv_path=None):
-    if venv_path is None:
-        venv_path = get_venv_path()
-        if venv_path is None:
+def get_orig_prefix_txt_path(venv_prefix=None):
+    if venv_prefix is None:
+        venv_prefix = get_venv_prefix()
+        if venv_prefix is None:
             return None
 
     try:
-        orig_prefix_path = os.path.join(venv_path,
+        orig_prefix_path = os.path.join(venv_prefix,
                                         LIB_PATH,
                                         "orig-prefix.txt")
     except TypeError:
@@ -242,8 +242,8 @@ def get_orig_prefix_txt_path(venv_path=None):
     return orig_prefix_path
 
 
-def get_virtualenv_original_prefix(venv_path=None):
-    orig_prefix_txt_path = get_orig_prefix_txt_path(venv_path)
+def get_virtualenv_original_prefix(venv_prefix=None):
+    orig_prefix_txt_path = get_orig_prefix_txt_path(venv_prefix)
     if orig_prefix_txt_path is None:
         return None
 
@@ -259,22 +259,22 @@ def get_virtualenv_original_prefix(venv_path=None):
     return original_prefix
 
 
-def get_virtualenv_version(venv_path=None):
-    original_prefix = get_virtualenv_original_prefix(venv_path)
+def get_virtualenv_version(venv_prefix=None):
+    original_prefix = get_virtualenv_original_prefix(venv_prefix)
     if original_prefix is None:
         return None
 
     return get_python_version(original_prefix)
 
 
-def get_virtualenv_activate_this_path(venv_path=None):
-    if venv_path is None:
-        venv_path = get_venv_path()
-        if venv_path is None:
+def get_virtualenv_activate_this_path(venv_prefix=None):
+    if venv_prefix is None:
+        venv_prefix = get_venv_prefix()
+        if venv_prefix is None:
             return None
 
     try:
-        path = os.path.join(venv_path, BIN_PATH, "activate_this.py")
+        path = os.path.join(venv_prefix, BIN_PATH, "activate_this.py")
         virtualenv_activate_path = os.path.abspath(path)
     except TypeError:
         virtualenv_activate_path = None
@@ -282,42 +282,42 @@ def get_virtualenv_activate_this_path(venv_path=None):
     return virtualenv_activate_path
 
 
-def activate_virtualenv(venv_path=None, force=False):
-    if venv_path is None:
-        venv_path = get_venv_path()
-        if venv_path is None:
+def activate_virtualenv(venv_prefix=None, force=False):
+    if venv_prefix is None:
+        venv_prefix = get_venv_prefix()
+        if venv_prefix is None:
             return None
 
-    virtualenv_version = get_virtualenv_version(venv_path)
+    virtualenv_version = get_virtualenv_version(venv_prefix)
     if not force and not is_valid_version(virtualenv_version):
         return None
 
-    activate_this_path = get_virtualenv_activate_this_path(venv_path)
+    activate_this_path = get_virtualenv_activate_this_path(venv_prefix)
     if activate_this_path is None:
         return None
 
-    new_venv_path = None
+    new_venv_prefix = None
     try:
         activate_source = open(activate_this_path).read()
         exec(activate_source, dict(__file__=activate_this_path))
-        new_venv_path = venv_path
+        new_venv_prefix = venv_prefix
     except OSError:
         pass
 
-    return new_venv_path
+    return new_venv_prefix
 
 
-def activate(venv_path=None):
-    if venv_path is None:
-        venv_path = get_venv_path()
-        if venv_path is None:
+def activate(venv_prefix=None):
+    if venv_prefix is None:
+        venv_prefix = get_venv_prefix()
+        if venv_prefix is None:
             return None
 
-    if not is_valid_lib_path(venv_path):
+    if not is_valid_lib_path(venv_prefix):
         return None
 
-    new_venv_path = activate_venv(venv_path)
-    if new_venv_path is None:
-        new_venv_path = activate_virtualenv(venv_path)
+    new_venv_prefix = activate_venv(venv_prefix)
+    if new_venv_prefix is None:
+        new_venv_prefix = activate_virtualenv(venv_prefix)
 
-    return new_venv_path
+    return new_venv_prefix
