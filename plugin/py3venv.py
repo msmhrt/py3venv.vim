@@ -30,15 +30,19 @@ def get_venv_prefix():
 
 
 def is_venv_activated():
-    # Because deactivate.bat in venv module of Python 3.3 doesn't unset
-    # %VIRTUAL_ENV%, we check %_OLD_VIRTUAL_PATH%.
+    # venv module has been added in Python 3.3
+    if sys.version_info < (3, 3):
+        return False
+
     activated = False
-    if sys.platform == "win32":
+    if sys.platform == "win32" and sys.version_info < (3, 3, 3):
+        # Because deactivate.bat in venv module of Python < 3.3.3 doesn't
+        # unset %VIRTUAL_ENV% (see Issue #17744 on bugs.python.org)
+        # we check %_OLD_VIRTUAL_PATH% instead of %VIRTUAL_ENV%.
         if os.environ.get("_OLD_VIRTUAL_PATH") is not None:
             activated = True
-    else:
-        if get_venv_prefix() is not None:
-            activated = True
+    elif get_venv_prefix() is not None:
+        activated = True
 
     return activated
 
