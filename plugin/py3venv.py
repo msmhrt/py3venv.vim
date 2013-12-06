@@ -298,7 +298,9 @@ def activate_virtualenv(venv_prefix=None, force=False):
 
     new_venv_prefix = None
     try:
-        activate_source = open(activate_this_path).read()
+        # Using ISO/IEC 8859-1 just in case.
+        with open(activate_this_path, encoding='iso8859-1') as activate_file:
+            activate_source = activate_file.read()
         exec(activate_source, dict(__file__=activate_this_path))
         new_venv_prefix = venv_prefix
     except OSError:
