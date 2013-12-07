@@ -12,12 +12,10 @@ import sys
 if sys.platform == "win32":
     BIN_PATH = "Scripts"
     LIB_PATH = "Lib"
-    EXECFILE = "Python.exe"
 else:
     BIN_PATH = "bin"
     LIB_PATH = os.path.join("lib",
                             "python{0}.{1}".format(*sys.version_info))
-    EXECFILE = "python"
 
 RE_VENV_HOME = re.compile(r"""(?xa)
     \A\s*home\s*=\s*(?P<home>[^\r\n]+)""")
@@ -147,6 +145,21 @@ def is_valid_lib_path(venv_prefix=None):
     return os.path.exists(lib_path)
 
 
+def make_prognames():
+    if sys.platform == "win32":
+        prognames = ["python.exe"]
+    else:
+        prognames = ["python",
+                     "python{0}".format(*sys.version_info),
+                     "python{0}.{1}".format(*sys.version_info)]
+        # for future use
+        if (hasattr(sys, "abiflags") and
+                sys.abiflags is not None and sys.abiflags != ""):
+            prognames.append("python{0}.{1}".format(*sys.version_info) +
+                             sys.abiflags)
+    return prognames
+
+
 def make_venv_executable_path(venv_prefix=None):
     if venv_prefix is None:
         venv_prefix = get_venv_prefix()
@@ -155,9 +168,12 @@ def make_venv_executable_path(venv_prefix=None):
 
     venv_executable_path = None
     try:
-        venv_executable_path = os.path.abspath(os.path.join(venv_prefix,
-                                                            BIN_PATH,
-                                                            EXECFILE))
+        for progname in make_prognames():
+            path = os.path.join(venv_prefix, BIN_PATH, progname)
+            path = os.path.abspath(path)
+            if os.path.isfile(path):
+                venv_executable_path = path
+                break
     except TypeError:
         pass
 
