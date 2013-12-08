@@ -142,7 +142,7 @@ def is_valid_lib_path(venv_prefix=None):
     except TypeError:
         return False
 
-    return os.path.exists(lib_path)
+    return os.path.isdir(lib_path)
 
 
 def make_prognames():
