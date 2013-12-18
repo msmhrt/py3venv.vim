@@ -21,7 +21,6 @@ set cpo&vim
 python3 << PYTHONEOF
 try:
     class DummyClassForLocalScope():
-        import os
         import sys
         import vim
 
