@@ -64,7 +64,9 @@ class TestPy3venv(TestCase):
                 a_attr = _make_test_data(a_attr)
                 setattr(mock_sys, "a", a_attr)
                 backuped = {"id": a_attr, "value": a_attr}
-                if type(a_attr) is list or type(a_attr) is dict:
+                if type(a_attr) is list:
+                    backuped["value"] = a_attr[:]
+                if type(a_attr) is dict:
                     backuped["value"] = a_attr.copy()
 
             return backuped

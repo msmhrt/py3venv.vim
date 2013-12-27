@@ -227,7 +227,11 @@ def fix_sys_attrs(new_sys_attrs, sys=sys):
         original_attr = getattr(sys, attr_name, NOT_FOUND)
         new_attr = new_sys_attrs[attr_name]
 
-        if type(original_attr) is list or type(original_attr) is dict:
+        if type(original_attr) is list:
+            saved_sys_attrs[attr_name] = [AS_IS,
+                                          original_attr,
+                                          original_attr[:]]
+        elif type(original_attr) is dict:
             saved_sys_attrs[attr_name] = [AS_IS,
                                           original_attr,
                                           original_attr.copy()]
