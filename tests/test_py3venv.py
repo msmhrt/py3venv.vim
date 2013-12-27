@@ -9,9 +9,15 @@ from unittest import TestCase
 class TestPy3venv(TestCase):
     def test_sys_attrs(self):
         from itertools import product
+        import os
         import sys
-        from plugin.py3venv import (fix_sys_attrs, recover_sys_attrs,
-                                    AS_IS, NOT_FOUND)
+
+        plugin_dir = os.path.dirname(os.path.dirname(__file__))
+        plugin_dir = os.path.join(plugin_dir, "plugin")
+        if sys.path[0] != plugin_dir:
+            sys.path.insert(0, plugin_dir)
+        from py3venv import (fix_sys_attrs, recover_sys_attrs,
+                             AS_IS, NOT_FOUND)
 
         self.assertIs(fix_sys_attrs({"flags": AS_IS})["flags"], sys.flags)
 
