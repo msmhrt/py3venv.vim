@@ -6,7 +6,6 @@
 import distutils
 import os
 import re
-import site
 import sys
 
 if sys.platform == "win32":
@@ -16,6 +15,9 @@ else:
     BIN_PATH = "bin"
     LIB_PATH = os.path.join("lib",
                             "python{0}.{1}".format(*sys.version_info))
+
+AS_IS = object()
+NOT_FOUND = object()
 
 RE_VENV_HOME = re.compile(r"""(?xa)
     \A\s*home\s*=\s*(?P<home>[^\r\n]+)""")
@@ -181,23 +183,26 @@ def make_venv_executable_path(venv_prefix=None):
 
 
 def reset_syspath():
-    # remove sys.__egginsert for easy-install.pth
-    if hasattr(sys, "__egginsert"):
-        delattr(sys, "__egginsert")
-
     # id(sys.path) must not be changed.
-    saved_syspath = sys.path
+    original_syspath = sys.path
     try:
         from ctypes import pythonapi
 
+        # Delete sys.path before calling PySys_SetPath()
         delattr(sys, "path")
-        pythonapi.PySys_SetPath(pythonapi.Py_GetPath())
-        saved_syspath[:] = sys.path
+
+        # All preparations are finished, Now we will call Py_GetPath()
+        p_module_search_path = pythonapi.Py_GetPath()
+
+        # Reset sys.path
+        pythonapi.PySys_SetPath(p_module_search_path)
+
+        # id(sys.path) must not be changed.
+        original_syspath[:] = sys.path
+
         error = None
     except (ImportError, AttributeError, EnvironmentError) as exception:
         error = exception
-    finally:
-        sys.path = saved_syspath
 
     return error
 
@@ -216,6 +221,67 @@ def get_vim_special_path():
     return vim_special_path
 
 
+def fix_sys_attrs(new_sys_attrs, sys=sys):
+    saved_sys_attrs = {}
+    for attr_name in new_sys_attrs:
+        original_attr = getattr(sys, attr_name, NOT_FOUND)
+        new_attr = new_sys_attrs[attr_name]
+
+        if type(original_attr) is list or type(original_attr) is dict:
+            saved_sys_attrs[attr_name] = [AS_IS,
+                                          original_attr,
+                                          original_attr.copy()]
+        else:
+            saved_sys_attrs[attr_name] = original_attr
+
+        if original_attr is new_attr or new_attr is AS_IS:
+            pass
+        elif new_attr is NOT_FOUND:
+            # original_attr isn't NOT_FOUND because original_attr
+            # isn't new_attr
+            delattr(sys, attr_name)
+        elif type(original_attr) is list and type(new_attr) is list:
+            original_attr[:] = new_attr
+        elif type(original_attr) is dict and type(new_attr) is dict:
+            original_attr.clear()
+            original_attr.update(new_attr)
+        else:
+            setattr(sys, attr_name, new_attr)
+
+    return saved_sys_attrs
+
+
+def recover_sys_attrs(saved_sys_attrs, sys=sys):
+    for attr_name in saved_sys_attrs:
+        fixed_attr = getattr(sys, attr_name, NOT_FOUND)
+        saved_attr = saved_sys_attrs[attr_name]
+        if fixed_attr is saved_attr:
+            pass
+        elif saved_attr is NOT_FOUND:
+            delattr(sys, attr_name)
+        elif type(saved_attr) is list:
+            if (len(saved_attr) != 3 or saved_attr[0] is not AS_IS or
+                    (type(saved_attr[1]) is not list and
+                     type(saved_attr[1]) is not dict) or
+                    saved_attr[1].__class__ is not saved_attr[2].__class__):
+                print("Can't restore {} to sys.{}".format(saved_attr,
+                                                          attr_name),
+                      file=sys.stderr)
+                continue
+
+            if fixed_attr is not saved_attr[1]:
+                setattr(sys, attr_name, saved_attr[1])
+                fixed_attr = saved_attr[1]
+
+            if type(fixed_attr) is list:
+                fixed_attr[:] = saved_attr[2]
+            elif type(fixed_attr) is dict:
+                fixed_attr.clear()
+                fixed_attr.update(saved_attr[2])
+        else:
+            setattr(sys, attr_name, saved_attr)
+
+
 def activate_venv(venv_prefix=None, force=False):
     if venv_prefix is None:
         venv_prefix = get_venv_prefix()
@@ -231,15 +297,32 @@ def activate_venv(venv_prefix=None, force=False):
     if venv_executable_path is None:
         return None
 
-    saved_sys_executable = sys.executable
-    sys.executable = venv_executable_path
+    # Fix attributes in sys module
+    new_sys_attrs = {"__egginsert": NOT_FOUND,
+                     "_home": NOT_FOUND,
+                     "executable": venv_executable_path,
+                     "modules": AS_IS,
+                     "path": AS_IS}
+    saved_sys_attrs = fix_sys_attrs(new_sys_attrs)
+
+    # Save vim_special_path before calling reset_syspath()
     vim_special_path = get_vim_special_path()
 
     error = reset_syspath()
     if error is not None:
-        sys.executable = saved_sys_executable
+        recover_sys_attrs(saved_sys_attrs)
         return None
-    site.main()
+
+    # Call main() of site module in new module search path
+    try:
+        if "site" in sys.modules:
+            del(sys.modules["site"])
+        import site
+        site.main()
+    except ImportError:
+        recover_sys_attrs(saved_sys_attrs)
+        return None
+
     if vim_special_path is not None and vim_special_path not in sys.path:
         sys.path.append(vim_special_path)
 
