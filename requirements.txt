@@ -1,4 +1,0 @@
-mock
-pep8
-pyflakes
-regex
