@@ -1,4 +1,3 @@
---index https://pypi.python.org/simple/
 mock
 pep8
 pyflakes
